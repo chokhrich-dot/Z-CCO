@@ -1,7 +1,7 @@
 # 🛡 ZamaCCO Smart Contracts
 ---
 
-![Alt text](./contracts/cco-banner.png)
+![Alt text](cco-banner.png)
 
 
 ---
