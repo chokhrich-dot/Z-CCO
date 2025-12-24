@@ -1,4 +1,10 @@
 # 🛡 ZamaCCO Smart Contracts
+---
+
+![Alt text](contracts/cco-banner.png)
+
+
+---
 
 This directory hosts the core **ZamaCCO** smart contracts powering the **Confidential Credit Oracle (CCO)** system.
 
