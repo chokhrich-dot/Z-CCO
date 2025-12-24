@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import LenderPortal from "./pages/LenderPortal";
 import TransactionHistory from "./pages/TransactionHistory";
 import FAQ from "./pages/FAQ";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/lender" element={<LenderPortal />} />
             <Route path="/history" element={<TransactionHistory />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
