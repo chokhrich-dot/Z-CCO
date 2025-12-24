@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Trophy, Star, Gift, Coins, Target, Award,
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useWallet } from '@/contexts/WalletContext';
+import { rewardsService, type EarnedReward } from '@/lib/web3/rewardsService';
 
 interface Reward {
   id: string;
@@ -35,111 +36,12 @@ interface Achievement {
   unlocked: boolean;
 }
 
-const mockRewards: Reward[] = [
-  {
-    id: '1',
-    name: 'First Submission',
-    description: 'Submit your first encrypted profile',
-    type: 'badge',
-    earned: true,
-    earnedAt: '2024-01-15',
-    icon: Star,
-    rarity: 'common'
-  },
-  {
-    id: '2',
-    name: 'CCO Pioneer',
-    description: 'Early adopter of the CCO platform',
-    type: 'nft',
-    earned: true,
-    earnedAt: '2024-01-10',
-    icon: Crown,
-    rarity: 'legendary'
-  },
-  {
-    id: '3',
-    name: 'Credit Master',
-    description: 'Achieve Excellent credit tier',
-    type: 'token',
-    amount: 100,
-    earned: false,
-    icon: Trophy,
-    rarity: 'epic'
-  },
-  {
-    id: '4',
-    name: 'Active Lender',
-    description: 'Complete 10 decryption requests',
-    type: 'token',
-    amount: 50,
-    earned: false,
-    icon: Zap,
-    rarity: 'rare'
-  },
-  {
-    id: '5',
-    name: 'Privacy Guardian',
-    description: 'Maintain encrypted profile for 30 days',
-    type: 'nft',
-    earned: true,
-    earnedAt: '2024-02-15',
-    icon: Lock,
-    rarity: 'epic'
-  },
-  {
-    id: '6',
-    name: 'Community Champion',
-    description: 'Refer 5 users to the platform',
-    type: 'token',
-    amount: 200,
-    earned: false,
-    icon: Medal,
-    rarity: 'legendary'
-  },
-];
-
-const achievements: Achievement[] = [
-  {
-    id: '1',
-    name: 'Profile Submissions',
-    description: 'Submit encrypted profiles',
-    progress: 3,
-    target: 5,
-    reward: 25,
-    icon: Lock,
-    unlocked: false
-  },
-  {
-    id: '2',
-    name: 'Score Improvements',
-    description: 'Improve your credit score',
-    progress: 2,
-    target: 3,
-    reward: 50,
-    icon: TrendingUp,
-    unlocked: false
-  },
-  {
-    id: '3',
-    name: 'Consecutive Days',
-    description: 'Active days in a row',
-    progress: 7,
-    target: 7,
-    reward: 75,
-    icon: Flame,
-    unlocked: true
-  },
-  {
-    id: '4',
-    name: 'Lending Activity',
-    description: 'Approve decryption requests',
-    progress: 8,
-    target: 10,
-    reward: 100,
-    icon: Gift,
-    unlocked: false
-  },
-];
+const rarityStyles: Record<string, string> = {
+  common: 'border-muted-foreground bg-muted/20',
+  rare: 'border-blue-500 bg-blue-500/20',
+  epic: 'border-purple-500 bg-purple-500/20',
+  legendary: 'border-primary bg-primary/20 glow-primary',
+};
 
 const leaderboard = [
   { rank: 1, address: '0x742d...1a1f8', tokens: 1250, tier: 'Excellent' },
@@ -149,19 +51,150 @@ const leaderboard = [
   { rank: 5, address: '0x5c2b...8a1d', tokens: 650, tier: 'Good' },
 ];
 
-const rarityStyles: Record<string, string> = {
-  common: 'border-muted-foreground bg-muted/20',
-  rare: 'border-blue-500 bg-blue-500/20',
-  epic: 'border-purple-500 bg-purple-500/20',
-  legendary: 'border-primary bg-primary/20 glow-primary',
-};
-
 const Rewards = () => {
   const { address, isConnected } = useWallet();
   const [activeTab, setActiveTab] = useState<'rewards' | 'achievements' | 'leaderboard'>('rewards');
+  const [totalTokens, setTotalTokens] = useState(0);
+  const [earnedRewards, setEarnedRewards] = useState<EarnedReward[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [rewards, setRewards] = useState<Reward[]>([]);
 
-  const totalTokens = 175;
-  const earnedRewards = mockRewards.filter(r => r.earned).length;
+  // Load data from rewardsService
+  useEffect(() => {
+    const loadRewardsData = () => {
+      const state = rewardsService.getState();
+      setTotalTokens(state.totalTokens);
+      setEarnedRewards(state.earnedRewards);
+
+      // Check achievements from service
+      const stats = rewardsService.checkAchievements();
+      
+      setAchievements([
+        {
+          id: '1',
+          name: 'Profile Submissions',
+          description: 'Submit encrypted profiles',
+          progress: stats.profileSubmissions,
+          target: 5,
+          reward: 25,
+          icon: Lock,
+          unlocked: stats.profileSubmissions >= 5
+        },
+        {
+          id: '2',
+          name: 'Score Improvements',
+          description: 'Improve your credit score',
+          progress: Math.min(stats.totalActions, 3),
+          target: 3,
+          reward: 50,
+          icon: TrendingUp,
+          unlocked: stats.totalActions >= 3
+        },
+        {
+          id: '3',
+          name: 'Decryption Completions',
+          description: 'Complete decryption requests',
+          progress: stats.decryptionsCompleted,
+          target: 10,
+          reward: 75,
+          icon: Flame,
+          unlocked: stats.decryptionsCompleted >= 10
+        },
+        {
+          id: '4',
+          name: 'Active Participant',
+          description: 'Complete any 20 actions',
+          progress: stats.totalActions,
+          target: 20,
+          reward: 100,
+          icon: Gift,
+          unlocked: stats.totalActions >= 20
+        },
+      ]);
+
+      // Build rewards list based on earned rewards
+      const hasProfileSubmit = state.earnedRewards.some(r => r.action === 'profile_submit');
+      const hasScoreCompute = state.earnedRewards.some(r => r.action === 'score_compute');
+      const hasTierImprovement = state.earnedRewards.some(r => r.action === 'tier_improvement');
+      const hasDecryption = state.earnedRewards.some(r => r.action === 'decryption_complete');
+
+      setRewards([
+        {
+          id: '1',
+          name: 'First Submission',
+          description: 'Submit your first encrypted profile',
+          type: 'badge',
+          earned: hasProfileSubmit,
+          earnedAt: state.earnedRewards.find(r => r.action === 'profile_submit')?.earnedAt?.split('T')[0],
+          icon: Star,
+          rarity: 'common'
+        },
+        {
+          id: '2',
+          name: 'CCO Pioneer',
+          description: 'Early adopter of the CCO platform',
+          type: 'nft',
+          earned: state.earnedRewards.length > 0,
+          earnedAt: state.earnedRewards[0]?.earnedAt?.split('T')[0],
+          icon: Crown,
+          rarity: 'legendary'
+        },
+        {
+          id: '3',
+          name: 'Credit Master',
+          description: 'Achieve Excellent credit tier',
+          type: 'token',
+          amount: 100,
+          earned: hasTierImprovement,
+          earnedAt: state.earnedRewards.find(r => r.action === 'tier_improvement')?.earnedAt?.split('T')[0],
+          icon: Trophy,
+          rarity: 'epic'
+        },
+        {
+          id: '4',
+          name: 'Active Lender',
+          description: 'Complete 10 decryption requests',
+          type: 'token',
+          amount: 50,
+          earned: stats.decryptionsCompleted >= 10,
+          icon: Zap,
+          rarity: 'rare'
+        },
+        {
+          id: '5',
+          name: 'Privacy Guardian',
+          description: 'Maintain encrypted profile for 30 days',
+          type: 'nft',
+          earned: hasScoreCompute,
+          earnedAt: state.earnedRewards.find(r => r.action === 'score_compute')?.earnedAt?.split('T')[0],
+          icon: Lock,
+          rarity: 'epic'
+        },
+        {
+          id: '6',
+          name: 'Community Champion',
+          description: 'Refer 5 users to the platform',
+          type: 'token',
+          amount: 200,
+          earned: false,
+          icon: Medal,
+          rarity: 'legendary'
+        },
+      ]);
+    };
+
+    loadRewardsData();
+
+    // Listen for reward events
+    const handleRewardEarned = () => {
+      loadRewardsData();
+    };
+
+    window.addEventListener('rewardEarned', handleRewardEarned);
+    return () => window.removeEventListener('rewardEarned', handleRewardEarned);
+  }, []);
+
+  const earnedRewardsCount = rewards.filter(r => r.earned).length;
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -197,13 +230,6 @@ const Rewards = () => {
                 <Coins className="w-10 h-10 text-primary mx-auto mb-3" />
                 <p className="text-3xl font-bold text-gradient mb-1">{totalTokens}</p>
                 <p className="text-sm text-muted-foreground">CCO Tokens Earned</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-card border-border card-hover">
-              <CardContent className="pt-6 text-center">
-                <Trophy className="w-10 h-10 text-primary mx-auto mb-3" />
-                <p className="text-3xl font-bold text-gradient mb-1">{earnedRewards}/{mockRewards.length}</p>
-                <p className="text-sm text-muted-foreground">Rewards Collected</p>
               </CardContent>
             </Card>
             <Card className="bg-card border-border card-hover">
@@ -245,7 +271,7 @@ const Rewards = () => {
               transition={{ duration: 0.4 }}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
             >
-              {mockRewards.map((reward, index) => (
+              {rewards.map((reward, index) => (
                 <motion.div
                   key={reward.id}
                   initial={{ opacity: 0, y: 20 }}

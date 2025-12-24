@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Lock, TrendingUp, Eye, Zap, ArrowRight, Database, Key, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { MatrixBackground } from '@/components/layout/MatrixBackground';
 import { Header } from '@/components/layout/Header';
+import { PrivacyOverlay } from '@/components/effects/PrivacyOverlay';
 
 const features = [
   {
@@ -36,8 +38,18 @@ const stats = [
 ];
 
 const Index = () => {
+  const [showPrivacyOverlay, setShowPrivacyOverlay] = useState(true);
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Privacy Overlay */}
+      {showPrivacyOverlay && (
+        <PrivacyOverlay 
+          duration={3000} 
+          onComplete={() => setShowPrivacyOverlay(false)} 
+        />
+      )}
+      
       <MatrixBackground />
       <Header />
       

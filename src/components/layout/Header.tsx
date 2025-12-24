@@ -1,13 +1,13 @@
 import { motion } from 'framer-motion';
-import { Shield, Lock, Menu, X, Bell } from 'lucide-react';
+import { Shield, Lock, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ConnectWallet } from '../wallet/ConnectWallet';
-import { useWallet } from '@/contexts/WalletContext';
-import { Badge } from '@/components/ui/badge';
+import { NotificationBell } from './NotificationBell';
 
 const navItems = [
   { path: '/', label: 'Home' },
+  { path: '/why-zama', label: 'Why ZamaCCO' },
   { path: '/dashboard', label: 'Dashboard' },
   { path: '/lender', label: 'Lender Portal' },
   { path: '/history', label: 'Transactions' },
@@ -64,8 +64,9 @@ export const Header = () => {
               </Link>)}
           </nav>
 
-          {/* Wallet & Mobile Menu */}
-          <div className="flex items-center gap-4">
+          {/* Notifications, Wallet & Mobile Menu */}
+          <div className="flex items-center gap-3">
+            <NotificationBell />
             <ConnectWallet />
             
             <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="lg:hidden p-2 text-foreground hover:text-primary transition-colors">
