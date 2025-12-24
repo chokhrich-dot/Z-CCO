@@ -1,0 +1,18 @@
+<svg width="900" height="500" xmlns="http://www.w3.org/2000/svg">
+  <rect x="40" y="180" width="200" height="80" fill="#111827" rx="12"/>
+  <text x="70" y="225" fill="#ffffff" font-size="16">Borrower UI</text>
+
+  <rect x="350" y="120" width="220" height="120" fill="#6d28d9" rx="14"/>
+  <text x="385" y="185" fill="#ffffff" font-size="16">Zama FHEVM</text>
+  <text x="370" y="210" fill="#ffffff" font-size="12">Encrypted Computation</text>
+
+  <rect x="700" y="180" width="160" height="80" fill="#111827" rx="12"/>
+  <text x="720" y="225" fill="#ffffff" font-size="16">Lender UI</text>
+
+  <line x1="240" y1="220" x2="350" y2="180" stroke="#22c55e" stroke-width="3"/>
+  <line x1="570" y1="180" x2="700" y2="220" stroke="#22c55e" stroke-width="3"/>
+
+  <text x="255" y="165" fill="#22c55e" font-size="12">Encrypted Inputs</text>
+  <text x="580" y="165" fill="#22c55e" font-size="12">Public Credit Tier</text>
+</svg>
+
