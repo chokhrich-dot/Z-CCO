@@ -17,15 +17,51 @@ const faqItems = [
     questions: [
       {
         q: 'What is Fully Homomorphic Encryption (FHE)?',
-        a: 'FHE is a revolutionary encryption technique that allows computations to be performed directly on encrypted data without ever decrypting it. This means your financial data remains private even while the credit score is being calculated. The result is also encrypted and can only be decrypted by authorized parties.',
+        a: 'FHE is a revolutionary encryption technique that allows computations to be performed directly on encrypted data without ever decrypting it. This means your financial data remains private even while the credit score is being calculated.',
       },
       {
-        q: 'How does Zama\'s fhEVM work?',
-        a: 'Zama\'s fhEVM is an Ethereum Virtual Machine that supports FHE operations. It allows smart contracts to perform computations on encrypted integers (euint32) while maintaining full privacy. The encryption keys are managed through a threshold network, ensuring no single party can decrypt the data.',
+        q: "How does Zama's fhEVM work?",
+        a: "Zama's fhEVM is an Ethereum Virtual Machine that supports FHE operations. It allows smart contracts to perform computations on encrypted integers (euint32) while maintaining full privacy.",
       },
       {
         q: 'Is my data really secure?',
-        a: 'Yes. Your financial data (income, collateral, debt) is encrypted on your device before being submitted to the blockchain. The encrypted values cannot be read by anyone—not even the blockchain validators or other smart contracts. Only you and parties you explicitly authorize can access the computed credit score.',
+        a: 'Yes. Your financial data is encrypted on your device before being submitted to the blockchain. The encrypted values cannot be read by anyone—not even the blockchain validators.',
+      },
+    ],
+  },
+  {
+    category: 'Relayer SDK & Gateway',
+    icon: Key,
+    questions: [
+      {
+        q: 'What is the Relayer SDK?',
+        a: 'The Relayer SDK facilitates secure communication between the DApp and the Zama Gateway, handling encrypted data exchanges and decryption requests without requiring users to interact directly with the Gateway Chain.',
+      },
+      {
+        q: 'How does the Gateway process decryption?',
+        a: 'When a lender requests decryption, the Relayer forwards the request to Zama Gateway. The Gateway processes the FHE decryption using threshold cryptography and returns only the credit tier—never your raw financial data.',
+      },
+      {
+        q: 'Is the Relayer communication secure?',
+        a: 'Yes. All communication is cryptographically signed and verified. The Relayer cannot see or modify your encrypted data—it only facilitates the secure transfer of encrypted payloads.',
+      },
+    ],
+  },
+  {
+    category: 'Access Control (ACL)',
+    icon: Users,
+    questions: [
+      {
+        q: 'How do I control who sees my credit tier?',
+        a: 'CCO uses an Access Control List (ACL) system. You can grant or revoke access to specific lender addresses from your Profile page. Only authorized lenders can request decryption.',
+      },
+      {
+        q: 'Can I set expiring permissions?',
+        a: 'Yes. When granting access, you can optionally set an expiry date. After expiration, the lender must request access again. This gives you fine-grained control over your data.',
+      },
+      {
+        q: 'Are access requests logged on-chain?',
+        a: 'Yes. Every decryption request creates an on-chain event (DecryptionRequested) that records the lender and borrower addresses, providing full transparency and auditability.',
       },
     ],
   },
@@ -35,51 +71,15 @@ const faqItems = [
     questions: [
       {
         q: 'Who can see my financial data?',
-        a: 'No one can see your raw financial data once it\'s encrypted. The blockchain only stores encrypted values that appear as random data to anyone without the decryption key. Even lenders who request your credit score only see the tier (Poor, Fair, Good, Excellent)—never the underlying numbers.',
+        a: "No one can see your raw financial data. The blockchain only stores encrypted values. Even authorized lenders only see your credit tier (Poor, Fair, Good, Excellent)—never the underlying numbers.",
       },
       {
         q: 'What happens when a lender requests decryption?',
-        a: 'When a lender requests decryption, a blockchain transaction is created that logs this request. You maintain control over who can decrypt your score. The decryption only reveals your credit tier classification, not your actual income, debt, or collateral values.',
+        a: 'The request goes through the Relayer to the Gateway. If you have granted that lender access via ACL, the Gateway decrypts only your credit tier classification and returns it.',
       },
       {
         q: 'Can I revoke access to my data?',
-        a: 'Yes. You have full control over your encrypted profile. You can update your data or manage access permissions at any time. All access requests are logged on-chain, providing full transparency about who has viewed your credit tier.',
-      },
-    ],
-  },
-  {
-    category: 'How CCO Works',
-    icon: Key,
-    questions: [
-      {
-        q: 'How is my credit score calculated?',
-        a: 'Your credit score is calculated using a formula that combines your encrypted income, collateral, and debt values. The computation happens entirely on encrypted data using FHE operations. The final result is categorized into one of four tiers: Poor, Fair, Good, or Excellent.',
-      },
-      {
-        q: 'What data do I need to submit?',
-        a: 'You need to submit three values: your monthly income, your collateral value, and your current debt—all in USD. These values are encrypted client-side before being sent to the smart contract. The encryption ensures that even if someone intercepts the transaction, they cannot read your data.',
-      },
-      {
-        q: 'How long does the process take?',
-        a: 'The encryption happens instantly on your device. Submitting the encrypted data to the blockchain typically takes 15-30 seconds depending on network conditions. Computing your credit score requires an additional transaction that usually completes within a minute.',
-      },
-    ],
-  },
-  {
-    category: 'For Lenders',
-    icon: Users,
-    questions: [
-      {
-        q: 'How do I verify a borrower\'s creditworthiness?',
-        a: 'As a lender, you can search for borrower profiles using their wallet address. If they have submitted an encrypted profile, you can request decryption of their credit tier. Once approved, you\'ll see their tier classification (Poor, Fair, Good, or Excellent).',
-      },
-      {
-        q: 'Can I see the borrower\'s actual financial numbers?',
-        a: 'No. The FHE encryption ensures that you only see the computed credit tier, never the raw financial data. This protects borrower privacy while still giving you meaningful information about their creditworthiness.',
-      },
-      {
-        q: 'Are decryption requests logged?',
-        a: 'Yes. Every decryption request creates an on-chain event (DecryptionRequested) that records your address and the borrower\'s address. This provides full transparency and auditability for all access to credit information.',
+        a: 'Yes. You have full control via the Profile page. Revoke any permission instantly. All access changes are logged on-chain for transparency.',
       },
     ],
   },

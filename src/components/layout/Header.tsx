@@ -9,6 +9,7 @@ const navItems = [
   { path: '/dashboard', label: 'Dashboard' },
   { path: '/lender', label: 'Lender Portal' },
   { path: '/history', label: 'Transactions' },
+  { path: '/profile', label: 'Profile' },
   { path: '/faq', label: 'FAQ' },
 ];
 
