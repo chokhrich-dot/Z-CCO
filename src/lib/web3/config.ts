@@ -41,9 +41,23 @@ export const ZAMA_CCO_ABI = [
     stateMutability: 'view',
   },
   {
+    type: 'function',
+    name: 'distributeReward',
+    inputs: [
+      { name: 'user', type: 'address', internalType: 'address' },
+      { name: 'rewardAmount', type: 'uint256', internalType: 'uint256' },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
     type: 'event',
     name: 'EncryptedProfileSubmitted',
-    inputs: [{ name: 'borrower', type: 'address', indexed: true, internalType: 'address' }],
+    inputs: [
+      { name: 'borrower', type: 'address', indexed: true, internalType: 'address' },
+      { name: 'encryptedData', type: 'string', indexed: false, internalType: 'string' },
+      { name: 'timestamp', type: 'uint256', indexed: false, internalType: 'uint256' },
+    ],
     anonymous: false,
   },
   {
@@ -61,6 +75,16 @@ export const ZAMA_CCO_ABI = [
     inputs: [
       { name: 'borrower', type: 'address', indexed: true, internalType: 'address' },
       { name: 'lender', type: 'address', indexed: true, internalType: 'address' },
+      { name: 'timestamp', type: 'uint256', indexed: false, internalType: 'uint256' },
+    ],
+    anonymous: false,
+  },
+  {
+    type: 'event',
+    name: 'RewardDistributed',
+    inputs: [
+      { name: 'user', type: 'address', indexed: true, internalType: 'address' },
+      { name: 'rewardAmount', type: 'uint256', indexed: false, internalType: 'uint256' },
     ],
     anonymous: false,
   },

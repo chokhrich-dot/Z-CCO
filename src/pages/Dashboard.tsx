@@ -9,11 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { ZAMA_CCO_ADDRESS } from '@/lib/web3/config';
-import { ZamaCCOService, simulateFHEEncryption } from '@/lib/web3/zamaService';
+import { zamaCCOService, simulateFHEEncryption } from '@/lib/web3/zamaService';
 import { TransactionModal, type TransactionPhase } from '@/components/modals/TransactionModal';
-import { EncryptionLoader } from '@/components/effects/EncryptionLoader';
 import { useBlockchainEvents } from '@/hooks/useBlockchainEvents';
-import { SkeletonCard } from '@/components/ui/skeleton';
+import { useWallet } from '@/contexts/WalletContext';
+import { rewardsService } from '@/lib/web3/rewardsService';
 
 interface EncryptedData {
   income: string;
@@ -22,6 +22,7 @@ interface EncryptedData {
 }
 
 const Dashboard = () => {
+  const { address, isConnected, connect } = useWallet();
   const [formData, setFormData] = useState<EncryptedData>({
     income: '',
     collateral: '',
@@ -39,9 +40,16 @@ const Dashboard = () => {
   useBlockchainEvents({
     onProfileSubmitted: (borrower, hash) => {
       console.log('Profile submitted event:', borrower, hash);
+      // Award tokens for submission
+      if (borrower.toLowerCase() === address?.toLowerCase()) {
+        rewardsService.earnReward('profile_submit', hash);
+      }
     },
     onCreditScoreComputed: (borrower, tier) => {
       console.log('Credit score computed event:', borrower, tier);
+      if (borrower.toLowerCase() === address?.toLowerCase()) {
+        rewardsService.earnReward('score_compute');
+      }
     },
   });
 
@@ -64,22 +72,32 @@ const Dashboard = () => {
       return;
     }
 
+    if (!isConnected) {
+      toast({
+        title: 'Wallet Not Connected',
+        description: 'Please connect your wallet first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setModalOpen(true);
     setModalPhase('encrypting');
     setModalError(undefined);
 
     try {
-      // Connect to service
-      const service = new ZamaCCOService();
-      await service.connect();
+      // Connect to service if not already connected
+      if (!zamaCCOService.isConnected()) {
+        await zamaCCOService.connect();
+      }
 
       // Phase 1: Encrypting
       await new Promise((resolve) => setTimeout(resolve, 1500));
       setModalPhase('submitting');
 
       // Phase 2: Submit to blockchain
-      const result = await service.submitEncryptedData(
+      const result = await zamaCCOService.submitEncryptedData(
         formData.income,
         formData.collateral,
         formData.debt
@@ -142,6 +160,11 @@ const Dashboard = () => {
             <p className="text-muted-foreground max-w-xl mx-auto">
               Submit your encrypted financial data to generate a private credit score
             </p>
+            {address && (
+              <p className="text-xs font-mono text-primary mt-2">
+                Connected: {address.slice(0, 10)}...{address.slice(-8)}
+              </p>
+            )}
           </motion.div>
 
           <div className="grid lg:grid-cols-2 gap-8">
@@ -202,30 +225,41 @@ const Dashboard = () => {
                   </div>
 
                   <div className="pt-4">
-                    <Button
-                      onClick={handleSubmit}
-                      disabled={isSubmitting}
-                      variant="cta"
-                      className="w-full"
-                      size="lg"
-                    >
-                      {isSubmitting ? (
-                        <span className="flex items-center gap-2">
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                          >
-                            <Lock className="w-4 h-4" />
-                          </motion.div>
-                          Processing...
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-2">
-                          <Send className="w-4 h-4" />
-                          Submit Encrypted Data
-                        </span>
-                      )}
-                    </Button>
+                    {!isConnected ? (
+                      <Button
+                        onClick={connect}
+                        variant="cta"
+                        className="w-full"
+                        size="lg"
+                      >
+                        Connect Wallet to Submit
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        variant="cta"
+                        className="w-full"
+                        size="lg"
+                      >
+                        {isSubmitting ? (
+                          <span className="flex items-center gap-2">
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                            >
+                              <Lock className="w-4 h-4" />
+                            </motion.div>
+                            Processing...
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-2">
+                            <Send className="w-4 h-4" />
+                            Submit Encrypted Data
+                          </span>
+                        )}
+                      </Button>
+                    )}
                   </div>
 
                   <div className="text-xs text-muted-foreground flex items-start gap-2 p-3 bg-secondary/30 rounded-lg">

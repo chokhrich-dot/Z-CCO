@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Users, Eye, Lock, Unlock, Search, Shield, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { MatrixBackground } from '@/components/layout/MatrixBackground';
@@ -9,10 +9,13 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { creditTierLabels, type CreditTier } from '@/lib/web3/config';
 import { Badge } from '@/components/ui/badge';
-import { RelayerService, ACLManager } from '@/lib/web3/zamaService';
+import { zamaCCOService } from '@/lib/web3/zamaService';
 import { TransactionModal, type TransactionPhase } from '@/components/modals/TransactionModal';
 import { useBlockchainEvents } from '@/hooks/useBlockchainEvents';
-import { SkeletonTransaction } from '@/components/ui/skeleton';
+import { useWallet } from '@/contexts/WalletContext';
+import { fetchProfileSubmissions } from '@/lib/web3/transactionService';
+import { rewardsService } from '@/lib/web3/rewardsService';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface BorrowerProfile {
   address: string;
@@ -22,37 +25,6 @@ interface BorrowerProfile {
   lastUpdated: string;
 }
 
-const mockBorrowers: BorrowerProfile[] = [
-  {
-    address: '0x742d35Cc6634C0532925a3b844Bc9e7595f1a1f8',
-    hasProfile: true,
-    tier: null,
-    isDecrypted: false,
-    lastUpdated: '2024-01-15',
-  },
-  {
-    address: '0x8ba1f109551bD432803012645Ac136ddd64DBA72',
-    hasProfile: true,
-    tier: 'Good',
-    isDecrypted: true,
-    lastUpdated: '2024-01-14',
-  },
-  {
-    address: '0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec',
-    hasProfile: true,
-    tier: 'Excellent',
-    isDecrypted: true,
-    lastUpdated: '2024-01-13',
-  },
-  {
-    address: '0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097',
-    hasProfile: true,
-    tier: null,
-    isDecrypted: false,
-    lastUpdated: '2024-01-12',
-  },
-];
-
 const tierColors: Record<CreditTier, string> = {
   Poor: 'bg-destructive/20 text-destructive border-destructive/30',
   Fair: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
@@ -61,89 +33,122 @@ const tierColors: Record<CreditTier, string> = {
 };
 
 const LenderPortal = () => {
+  const { address: lenderAddress, isConnected, connect } = useWallet();
   const [searchAddress, setSearchAddress] = useState('');
-  const [borrowers, setBorrowers] = useState<BorrowerProfile[]>(mockBorrowers);
+  const [borrowers, setBorrowers] = useState<BorrowerProfile[]>([]);
   const [isRequesting, setIsRequesting] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Transaction modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [modalPhase, setModalPhase] = useState<TransactionPhase>('encrypting');
   const [modalTxHash, setModalTxHash] = useState<string | null>(null);
   const [modalError, setModalError] = useState<string | undefined>();
-  const [currentBorrower, setCurrentBorrower] = useState<string>('');
 
-  // Services
-  const relayerService = new RelayerService();
-  const aclManager = new ACLManager();
+  // Load borrowers from blockchain events
+  const loadBorrowers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const submissions = await fetchProfileSubmissions();
+      
+      // Convert to borrower profiles
+      const profiles: BorrowerProfile[] = submissions.map(event => ({
+        address: event.from,
+        hasProfile: true,
+        tier: null,
+        isDecrypted: false,
+        lastUpdated: event.timestamp.split('T')[0],
+      }));
+
+      // Remove duplicates, keeping the most recent
+      const uniqueProfiles = profiles.reduce((acc, curr) => {
+        const existing = acc.find(p => p.address.toLowerCase() === curr.address.toLowerCase());
+        if (!existing) {
+          acc.push(curr);
+        }
+        return acc;
+      }, [] as BorrowerProfile[]);
+
+      setBorrowers(uniqueProfiles);
+    } catch (error) {
+      console.error('Error loading borrowers:', error);
+      // Fall back to empty state
+      setBorrowers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBorrowers();
+  }, [loadBorrowers]);
 
   // Real-time blockchain events
   useBlockchainEvents({
+    onProfileSubmitted: (borrower, txHash, timestamp) => {
+      // Add new borrower to list
+      setBorrowers(prev => {
+        const exists = prev.some(b => b.address.toLowerCase() === borrower.toLowerCase());
+        if (exists) return prev;
+        return [{
+          address: borrower,
+          hasProfile: true,
+          tier: null,
+          isDecrypted: false,
+          lastUpdated: timestamp ? new Date(timestamp * 1000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        }, ...prev];
+      });
+    },
     onDecryptionRequested: (borrower, lender, txHash) => {
       console.log('Decryption requested event:', borrower, lender, txHash);
-      // Update UI when decryption is completed
-      setBorrowers((prev) =>
-        prev.map((b) =>
-          b.address.toLowerCase() === borrower.toLowerCase()
-            ? { ...b, isDecrypted: true }
-            : b
-        )
-      );
     },
   });
 
   const handleRequestDecryption = async (borrowerAddress: string) => {
-    // Get connected wallet address (mock for now)
-    const lenderAddress = '0xLenderAddress...';
-    
-    // For demo purposes, auto-grant access if not present
-    if (!aclManager.hasAccess(borrowerAddress, lenderAddress)) {
-      aclManager.grantAccess(borrowerAddress, lenderAddress, 30);
+    if (!isConnected) {
+      toast({
+        title: 'Wallet Not Connected',
+        description: 'Please connect your wallet first.',
+        variant: 'destructive',
+      });
+      return;
     }
 
     setIsRequesting(borrowerAddress);
-    setCurrentBorrower(borrowerAddress);
     setModalOpen(true);
     setModalPhase('submitting');
     setModalError(undefined);
     setModalTxHash(null);
 
     try {
-      // Phase 1: Submit decryption request via Relayer
+      // Connect to service if needed
+      if (!zamaCCOService.isConnected()) {
+        await zamaCCOService.connect();
+      }
+
+      // Phase 1: Submit decryption request
       setModalPhase('decrypting');
       
-      // Mock encrypted score for demo
-      const mockEncryptedScore = `0x${Array.from({ length: 64 }, () => 
-        Math.floor(Math.random() * 16).toString(16)
-      ).join('')}`;
-      
-      const result = await relayerService.requestDecryption(
-        borrowerAddress,
-        lenderAddress,
-        mockEncryptedScore
-      );
+      const { result, tier } = await zamaCCOService.requestDecryption(borrowerAddress);
 
-      // Update borrower with decrypted tier from relayer
-      const newTier = result.tier;
-
+      // Update borrower with decrypted tier
       setBorrowers((prev) =>
         prev.map((b) =>
-          b.address === borrowerAddress
-            ? { ...b, isDecrypted: true, tier: newTier }
+          b.address.toLowerCase() === borrowerAddress.toLowerCase()
+            ? { ...b, isDecrypted: true, tier }
             : b
         )
       );
 
-      // Generate mock txHash for demo (in production, this comes from blockchain)
-      const mockTxHash = `0x${Array.from({ length: 64 }, () => 
-        Math.floor(Math.random() * 16).toString(16)
-      ).join('')}`;
-      setModalTxHash(mockTxHash);
+      setModalTxHash(result.hash);
       setModalPhase('complete');
+
+      // Award tokens for decryption
+      rewardsService.earnReward('decryption_complete', result.hash);
 
       toast({
         title: 'Decryption Complete',
-        description: `Credit tier revealed: ${newTier}`,
+        description: `Credit tier revealed: ${tier}`,
       });
     } catch (error: any) {
       console.error('Decryption error:', error);
@@ -195,6 +200,11 @@ const LenderPortal = () => {
             <p className="text-muted-foreground max-w-xl mx-auto">
               View borrower profiles and request decryption of credit scores via the Zama Relayer
             </p>
+            {lenderAddress && (
+              <p className="text-xs font-mono text-primary mt-2">
+                Lender: {lenderAddress.slice(0, 10)}...{lenderAddress.slice(-8)}
+              </p>
+            )}
           </motion.div>
 
           {/* Search */}
@@ -216,9 +226,9 @@ const LenderPortal = () => {
                       className="pl-10 bg-input border-border text-foreground"
                     />
                   </div>
-                  <Button variant="outline">
+                  <Button variant="outline" onClick={loadBorrowers}>
                     <Search className="w-4 h-4 mr-2" />
-                    Search
+                    Refresh
                   </Button>
                 </div>
               </CardContent>
@@ -235,7 +245,7 @@ const LenderPortal = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-foreground">
                   <Users className="w-5 h-5 text-primary" />
-                  Borrower Profiles
+                  Borrower Profiles ({borrowers.length})
                 </CardTitle>
                 <CardDescription>
                   View encrypted profiles and request score decryption via Relayer SDK
@@ -245,11 +255,20 @@ const LenderPortal = () => {
                 <div className="space-y-4">
                   {isLoading ? (
                     // Skeleton loading state
-                    <>
-                      <SkeletonTransaction />
-                      <SkeletonTransaction />
-                      <SkeletonTransaction />
-                    </>
+                    Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="p-4 bg-secondary/30 rounded-lg border border-border">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <Skeleton className="w-4 h-4" />
+                            <div>
+                              <Skeleton className="h-4 w-40 mb-2" />
+                              <Skeleton className="h-3 w-32" />
+                            </div>
+                          </div>
+                          <Skeleton className="h-8 w-36" />
+                        </div>
+                      </div>
+                    ))
                   ) : (
                     <AnimatePresence mode="popLayout">
                       {filteredBorrowers.map((borrower, index) => (
@@ -331,7 +350,7 @@ const LenderPortal = () => {
                               {!borrower.isDecrypted && (
                                 <Button
                                   onClick={() => handleRequestDecryption(borrower.address)}
-                                  disabled={isRequesting === borrower.address}
+                                  disabled={isRequesting === borrower.address || !isConnected}
                                   variant="encrypted"
                                   size="sm"
                                   className="relative overflow-hidden"
@@ -372,13 +391,38 @@ const LenderPortal = () => {
                       className="text-center py-12"
                     >
                       <AlertTriangle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">No borrowers found matching your search.</p>
+                      <p className="text-muted-foreground">
+                        {searchAddress 
+                          ? 'No borrowers found matching your search.'
+                          : 'No borrower profiles found on-chain yet.'}
+                      </p>
                     </motion.div>
                   )}
                 </div>
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Connect Wallet CTA if not connected */}
+          {!isConnected && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="mt-8"
+            >
+              <Card className="bg-card border-primary/30">
+                <CardContent className="pt-6 text-center">
+                  <p className="text-muted-foreground mb-4">
+                    Connect your wallet to request decryption of borrower credit scores
+                  </p>
+                  <Button onClick={connect} variant="cta">
+                    Connect Wallet
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           {/* Relayer Info Card */}
           <motion.div

@@ -1,27 +1,22 @@
 import { motion } from 'framer-motion';
-import { Shield, Lock, Menu, X } from 'lucide-react';
+import { Shield, Lock, Menu, X, Bell } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ConnectWallet } from '../wallet/ConnectWallet';
-const navItems = [{
-  path: '/',
-  label: 'Home'
-}, {
-  path: '/dashboard',
-  label: 'Dashboard'
-}, {
-  path: '/lender',
-  label: 'Lender Portal'
-}, {
-  path: '/history',
-  label: 'Transactions'
-}, {
-  path: '/profile',
-  label: 'Profile'
-}, {
-  path: '/faq',
-  label: 'FAQ'
-}];
+import { useWallet } from '@/contexts/WalletContext';
+import { Badge } from '@/components/ui/badge';
+
+const navItems = [
+  { path: '/', label: 'Home' },
+  { path: '/dashboard', label: 'Dashboard' },
+  { path: '/lender', label: 'Lender Portal' },
+  { path: '/history', label: 'Transactions' },
+  { path: '/analytics', label: 'Analytics' },
+  { path: '/rewards', label: 'Rewards' },
+  { path: '/profile', label: 'Profile' },
+  { path: '/roadmap', label: 'Roadmap' },
+  { path: '/faq', label: 'FAQ' },
+];
 export const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
