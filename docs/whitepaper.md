@@ -1,6 +1,6 @@
 # Z-CCO Whitepaper v1.0
 ---
-![Alt text](Whitepaper.png)
+![Alt text](z-ccoflow.png)
 
 
 ---
