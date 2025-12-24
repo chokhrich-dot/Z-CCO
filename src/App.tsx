@@ -14,6 +14,7 @@ import Profile from "./pages/Profile";
 import Analytics from "./pages/Analytics";
 import Rewards from "./pages/Rewards";
 import Roadmap from "./pages/Roadmap";
+import WhyZamaCCO from "./pages/WhyZamaCCO";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <AnimatePresence mode="wait">
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/why-zama" element={<WhyZamaCCO />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/lender" element={<LenderPortal />} />
               <Route path="/history" element={<TransactionHistory />} />

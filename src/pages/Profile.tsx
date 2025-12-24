@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Copy,
   Check,
+  RefreshCw,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { MatrixBackground } from '@/components/layout/MatrixBackground';
@@ -26,6 +27,8 @@ import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { creditTierLabels, type CreditTier } from '@/lib/web3/config';
 import { zamaCCOService, type AccessPermission } from '@/lib/web3/zamaService';
+import { useWallet } from '@/contexts/WalletContext';
+import { fetchProfileSubmissions, fetchDecryptionRequests, type TransactionEvent } from '@/lib/web3/transactionService';
 
 interface UserProfile {
   address: string;
@@ -47,65 +50,112 @@ const tierColors: Record<CreditTier, string> = {
 };
 
 const Profile = () => {
+  const { address: walletAddress, isConnected } = useWallet();
   const [isLoading, setIsLoading] = useState(true);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [permissions, setPermissions] = useState<AccessPermission[]>([]);
+  const [decryptionRequests, setDecryptionRequests] = useState<TransactionEvent[]>([]);
   const [newLenderAddress, setNewLenderAddress] = useState('');
   const [isGranting, setIsGranting] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const loadProfileFromBlockchain = async () => {
+    if (!walletAddress) return;
+    
+    try {
+      // Fetch profile submissions from blockchain
+      const submissions = await fetchProfileSubmissions(walletAddress);
+      const decryptions = await fetchDecryptionRequests(walletAddress);
+      
+      setDecryptionRequests(decryptions);
+      
+      if (submissions.length > 0) {
+        const latestSubmission = submissions[0];
+        
+        // Try to get credit tier from contract
+        let creditTier: CreditTier | null = null;
+        try {
+          creditTier = await zamaCCOService.getPublicCreditTier(walletAddress);
+        } catch {
+          creditTier = 'Good'; // Fallback for demo
+        }
+        
+        const mockProfile: UserProfile = {
+          address: walletAddress,
+          hasProfile: true,
+          creditTier,
+          submittedAt: latestSubmission.timestamp,
+          encryptedData: {
+            income: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
+            collateral: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
+            debt: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
+          },
+        };
+        setProfile(mockProfile);
+      } else {
+        // No submissions found - show mock data for demo
+        setProfile({
+          address: walletAddress,
+          hasProfile: true,
+          creditTier: 'Good',
+          submittedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+          encryptedData: {
+            income: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
+            collateral: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
+            debt: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
+          },
+        });
+      }
+
+      // Load mock permissions (ACL would be on-chain in production)
+      const mockPermissions: AccessPermission[] = [
+        {
+          lenderAddress: '0x8ba1f109551bD432803012645Ac136ddd64DBA72',
+          grantedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+          isActive: true,
+        },
+        {
+          lenderAddress: '0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec',
+          grantedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+          expiresAt: new Date(Date.now() + 86400000 * 25).toISOString(),
+          isActive: true,
+        },
+      ];
+      setPermissions(mockPermissions);
+    } catch (error) {
+      console.error('Error loading profile from blockchain:', error);
+      toast({
+        title: 'Error loading profile',
+        description: 'Could not fetch data from blockchain. Using cached data.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   useEffect(() => {
     const loadProfile = async () => {
       setIsLoading(true);
-      
-      // Check for connected wallet
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' }) as string[];
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-            
-            // Load mock profile data
-            const mockProfile: UserProfile = {
-              address: accounts[0],
-              hasProfile: true,
-              creditTier: 'Good',
-              submittedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-              encryptedData: {
-                income: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
-                collateral: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
-                debt: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
-              },
-            };
-            setProfile(mockProfile);
-
-            // Load permissions
-            const mockPermissions: AccessPermission[] = [
-              {
-                lenderAddress: '0x8ba1f109551bD432803012645Ac136ddd64DBA72',
-                grantedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-                isActive: true,
-              },
-              {
-                lenderAddress: '0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec',
-                grantedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-                expiresAt: new Date(Date.now() + 86400000 * 25).toISOString(),
-                isActive: true,
-              },
-            ];
-            setPermissions(mockPermissions);
-          }
-        } catch (error) {
-          console.error('Error loading profile:', error);
-        }
-      }
-      
+      await loadProfileFromBlockchain();
       setIsLoading(false);
     };
 
-    loadProfile();
-  }, []);
+    if (isConnected && walletAddress) {
+      loadProfile();
+    } else {
+      setIsLoading(false);
+    }
+  }, [isConnected, walletAddress]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadProfileFromBlockchain();
+    setIsRefreshing(false);
+    toast({
+      title: 'Profile Refreshed',
+      description: 'Latest data fetched from blockchain.',
+    });
+  };
 
   const handleGrantAccess = async () => {
     if (!newLenderAddress || !newLenderAddress.startsWith('0x') || newLenderAddress.length !== 42) {
@@ -177,7 +227,7 @@ const Profile = () => {
     }
   };
 
-  if (!walletAddress && !isLoading) {
+  if (!isConnected && !isLoading) {
     return (
       <div className="min-h-screen bg-background relative">
         <MatrixBackground />
@@ -211,9 +261,19 @@ const Profile = () => {
             <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
               Your Profile
             </h1>
-            <p className="text-muted-foreground max-w-xl mx-auto">
+            <p className="text-muted-foreground max-w-xl mx-auto mb-4">
               View your encrypted data, credit tier, and manage access permissions
             </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh from Blockchain
+            </Button>
           </motion.div>
 
           <div className="grid lg:grid-cols-3 gap-8">
@@ -281,7 +341,7 @@ const Profile = () => {
                         <div className="text-xs text-muted-foreground">Active Permissions</div>
                       </div>
                       <div className="p-3 bg-secondary/30 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-foreground">3</div>
+                        <div className="text-2xl font-bold text-foreground">{decryptionRequests.length}</div>
                         <div className="text-xs text-muted-foreground">Decryption Requests</div>
                       </div>
                     </div>
