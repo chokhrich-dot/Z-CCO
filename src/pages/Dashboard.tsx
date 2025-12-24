@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Shield, Lock, Unlock, Send, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { MatrixBackground } from '@/components/layout/MatrixBackground';
@@ -9,6 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { ZAMA_CCO_ADDRESS } from '@/lib/web3/config';
+import { ZamaCCOService, simulateFHEEncryption } from '@/lib/web3/zamaService';
+import { TransactionModal, type TransactionPhase } from '@/components/modals/TransactionModal';
+import { EncryptionLoader } from '@/components/effects/EncryptionLoader';
+import { useBlockchainEvents } from '@/hooks/useBlockchainEvents';
+import { SkeletonCard } from '@/components/ui/skeleton';
 
 interface EncryptedData {
   income: string;
@@ -23,18 +28,31 @@ const Dashboard = () => {
     debt: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isEncrypted, setIsEncrypted] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
+  
+  // Transaction modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalPhase, setModalPhase] = useState<TransactionPhase>('encrypting');
+  const [modalError, setModalError] = useState<string | undefined>();
+
+  // Real-time blockchain events
+  useBlockchainEvents({
+    onProfileSubmitted: (borrower, hash) => {
+      console.log('Profile submitted event:', borrower, hash);
+    },
+    onCreditScoreComputed: (borrower, tier) => {
+      console.log('Credit score computed event:', borrower, tier);
+    },
+  });
 
   const handleInputChange = (field: keyof EncryptedData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const simulateEncryption = (value: string): string => {
-    // Simulate FHE encryption (in reality, this would use Zama's library)
-    const hash = btoa(value + Math.random().toString(36)).slice(0, 16);
-    return `0x${hash.replace(/[^a-zA-Z0-9]/g, '').padEnd(64, '0')}`;
-  };
+  const getEncryptedPreview = useCallback((value: string): string => {
+    if (!value) return '';
+    return simulateFHEEncryption(value);
+  }, []);
 
   const handleSubmit = async () => {
     if (!formData.income || !formData.collateral || !formData.debt) {
@@ -47,28 +65,41 @@ const Dashboard = () => {
     }
 
     setIsSubmitting(true);
+    setModalOpen(true);
+    setModalPhase('encrypting');
+    setModalError(undefined);
 
     try {
-      // Simulate encryption process
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setIsEncrypted(true);
+      // Connect to service
+      const service = new ZamaCCOService();
+      await service.connect();
 
-      // Simulate transaction
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const mockTxHash = `0x${Array.from({ length: 64 }, () => 
-        Math.floor(Math.random() * 16).toString(16)
-      ).join('')}`;
-      
-      setTxHash(mockTxHash);
+      // Phase 1: Encrypting
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      setModalPhase('submitting');
+
+      // Phase 2: Submit to blockchain
+      const result = await service.submitEncryptedData(
+        formData.income,
+        formData.collateral,
+        formData.debt
+      );
+
+      setTxHash(result.hash);
+      setModalPhase('complete');
 
       toast({
         title: 'Profile Submitted',
         description: 'Your encrypted financial data has been submitted to the blockchain.',
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Submission error:', error);
+      setModalPhase('error');
+      setModalError(error?.message || 'Failed to submit encrypted data. Please try again.');
+      
       toast({
         title: 'Submission Failed',
-        description: 'Failed to submit encrypted data. Please try again.',
+        description: error?.message || 'Failed to submit encrypted data.',
         variant: 'destructive',
       });
     } finally {
@@ -77,15 +108,25 @@ const Dashboard = () => {
   };
 
   const encryptedValues = {
-    income: formData.income ? simulateEncryption(formData.income) : null,
-    collateral: formData.collateral ? simulateEncryption(formData.collateral) : null,
-    debt: formData.debt ? simulateEncryption(formData.debt) : null,
+    income: getEncryptedPreview(formData.income),
+    collateral: getEncryptedPreview(formData.collateral),
+    debt: getEncryptedPreview(formData.debt),
   };
 
   return (
     <div className="min-h-screen bg-background relative">
       <MatrixBackground />
       <Header />
+
+      {/* Transaction Modal */}
+      <TransactionModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        phase={modalPhase}
+        txHash={txHash}
+        errorMessage={modalError}
+        title="Submitting Encrypted Data"
+      />
 
       <main className="relative z-10 pt-28 pb-16 px-4">
         <div className="container mx-auto max-w-6xl">
@@ -130,6 +171,7 @@ const Dashboard = () => {
                       value={formData.income}
                       onChange={(e) => handleInputChange('income', e.target.value)}
                       className="bg-input border-border text-foreground placeholder:text-muted-foreground"
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -142,6 +184,7 @@ const Dashboard = () => {
                       value={formData.collateral}
                       onChange={(e) => handleInputChange('collateral', e.target.value)}
                       className="bg-input border-border text-foreground placeholder:text-muted-foreground"
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -154,6 +197,7 @@ const Dashboard = () => {
                       value={formData.debt}
                       onChange={(e) => handleInputChange('debt', e.target.value)}
                       className="bg-input border-border text-foreground placeholder:text-muted-foreground"
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -173,7 +217,7 @@ const Dashboard = () => {
                           >
                             <Lock className="w-4 h-4" />
                           </motion.div>
-                          {isEncrypted ? 'Submitting to Chain...' : 'Encrypting Data...'}
+                          Processing...
                         </span>
                       ) : (
                         <span className="flex items-center gap-2">
@@ -215,11 +259,16 @@ const Dashboard = () => {
                   {['income', 'collateral', 'debt'].map((field) => (
                     <div key={field} className="space-y-2">
                       <Label className="capitalize text-foreground">{field}</Label>
-                      <div className="p-3 bg-secondary/50 rounded-lg border border-border font-mono text-sm break-all">
+                      <div className="p-3 bg-secondary/50 rounded-lg border border-border font-mono text-sm break-all min-h-[52px]">
                         {encryptedValues[field as keyof typeof encryptedValues] ? (
-                          <span className="text-encrypted">
+                          <motion.span 
+                            className="text-encrypted"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            key={encryptedValues[field as keyof typeof encryptedValues]}
+                          >
                             {encryptedValues[field as keyof typeof encryptedValues]}
-                          </span>
+                          </motion.span>
                         ) : (
                           <span className="text-muted-foreground">Enter value to see encrypted output...</span>
                         )}
