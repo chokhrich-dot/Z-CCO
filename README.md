@@ -6,7 +6,7 @@
 
 ---
 
-![Alt text](./path/to/your/image.jpg)
+![Alt text](logo.png)
 
 
 ---
