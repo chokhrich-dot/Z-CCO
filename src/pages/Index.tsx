@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Lock, TrendingUp, Eye, Zap, ArrowRight, Database, Key, Users } from 'lucide-react';
+import { Shield, Lock, TrendingUp, Eye, Zap, ArrowRight, Database, Key, Users, Wallet, FileText, Calculator, Unlock, Github, Twitter, Play, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { MatrixBackground } from '@/components/layout/MatrixBackground';
 import { Header } from '@/components/layout/Header';
 import { PrivacyOverlay } from '@/components/effects/PrivacyOverlay';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const features = [
   {
@@ -37,8 +38,47 @@ const stats = [
   { value: '∞', label: 'Possibilities' },
 ];
 
+const walkthroughSteps = [
+  {
+    step: 1,
+    icon: Wallet,
+    title: 'Connect MetaMask',
+    description: 'Link your MetaMask wallet to securely interact with the DApp on Sepolia testnet.',
+    details: 'Click the "Connect Wallet" button in the header. Approve the connection request in MetaMask. Ensure you have some Sepolia ETH for gas fees.',
+  },
+  {
+    step: 2,
+    icon: Eye,
+    title: 'Navigate the Interface',
+    description: 'Explore the Dashboard, Lender Portal, and Profile sections to understand your options.',
+    details: 'The Dashboard shows your credit profile status. The Lender Portal is for those who want to view borrower scores. Profile shows your encrypted data history.',
+  },
+  {
+    step: 3,
+    icon: FileText,
+    title: 'Submit Encrypted Data',
+    description: 'Enter your financial data (income, collateral, debt) which gets encrypted using FHE before submission.',
+    details: 'Your data is encrypted client-side using Zama\'s FHE library. Only encrypted values are sent to the blockchain. Nobody can see your actual numbers.',
+  },
+  {
+    step: 4,
+    icon: Calculator,
+    title: 'Request Score Computation',
+    description: 'Trigger the on-chain credit score calculation that operates entirely on encrypted data.',
+    details: 'The smart contract performs mathematical operations on your encrypted data. The result is an encrypted credit tier (Poor, Fair, Good, Excellent).',
+  },
+  {
+    step: 5,
+    icon: Unlock,
+    title: 'Decrypt & View Results',
+    description: 'Grant decryption access to authorized lenders or view your own score with proper permissions.',
+    details: 'You control who can decrypt your score. Lenders must request access. You can revoke permissions at any time.',
+  },
+];
+
 const Index = () => {
   const [showPrivacyOverlay, setShowPrivacyOverlay] = useState(true);
+  const [expandedStep, setExpandedStep] = useState<number | null>(null);
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -53,8 +93,8 @@ const Index = () => {
       <MatrixBackground />
       <Header />
       
-      {/* Hero Section */}
-      <section className="relative z-10 pt-32 pb-20 px-4">
+      {/* Hero Section with Video */}
+      <section className="relative z-10 pt-32 pb-12 px-4">
         <div className="container mx-auto">
           <div className="max-w-4xl mx-auto text-center">
             <motion.div
@@ -86,7 +126,7 @@ const Index = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-4"
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12"
             >
               <Link to="/dashboard">
                 <Button variant="cta" size="xl" className="group">
@@ -94,13 +134,38 @@ const Index = () => {
                   <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </Button>
               </Link>
-              <Link to="/faq">
+              <Link to="/why-zama">
                 <Button variant="outline" size="xl">
                   Learn More
                 </Button>
               </Link>
             </motion.div>
           </div>
+
+          {/* YouTube Video Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="max-w-4xl mx-auto mb-8"
+          >
+            <div className="relative rounded-2xl overflow-hidden border border-primary/20 bg-card shadow-2xl shadow-primary/10">
+              <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent pointer-events-none z-10" />
+              <div className="aspect-video">
+                <iframe
+                  src="https://www.youtube.com/embed/Ydnn-3bfvBs?rel=0&modestbranding=1"
+                  title="ZamaCCO Demo Video"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
+              </div>
+            </div>
+            <p className="text-center text-sm text-muted-foreground mt-4 flex items-center justify-center gap-2">
+              <Play className="w-4 h-4" />
+              Watch the demo to see ZamaCCO in action
+            </p>
+          </motion.div>
 
           {/* Animated Shield */}
           <motion.div
@@ -127,6 +192,89 @@ const Index = () => {
               />
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Interactive DApp Walkthrough */}
+      <section className="relative z-10 py-20 px-4 bg-gradient-to-b from-transparent via-secondary/20 to-transparent">
+        <div className="container mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              How to Use ZamaCCO
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Follow these simple steps to start your private credit scoring journey
+            </p>
+          </motion.div>
+
+          <div className="max-w-3xl mx-auto space-y-4">
+            {walkthroughSteps.map((item, index) => (
+              <motion.div
+                key={item.step}
+                initial={{ opacity: 0, x: -30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true }}
+              >
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      onClick={() => setExpandedStep(expandedStep === item.step ? null : item.step)}
+                      className={`
+                        bg-card rounded-xl p-6 border cursor-pointer transition-all duration-300
+                        ${expandedStep === item.step 
+                          ? 'border-primary shadow-lg shadow-primary/20' 
+                          : 'border-border hover:border-primary/50'
+                        }
+                      `}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-primary font-bold">{item.step}</span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <item.icon className="w-5 h-5 text-primary" />
+                            <h3 className="text-lg font-semibold text-foreground">{item.title}</h3>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{item.description}</p>
+                          
+                          {/* Expandable details */}
+                          <motion.div
+                            initial={false}
+                            animate={{ 
+                              height: expandedStep === item.step ? 'auto' : 0,
+                              opacity: expandedStep === item.step ? 1 : 0
+                            }}
+                            transition={{ duration: 0.3 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="mt-4 pt-4 border-t border-border">
+                              <p className="text-sm text-foreground/80">{item.details}</p>
+                            </div>
+                          </motion.div>
+                        </div>
+                        <ChevronDown 
+                          className={`w-5 h-5 text-muted-foreground transition-transform duration-300 ${
+                            expandedStep === item.step ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">
+                    <p>Click to {expandedStep === item.step ? 'collapse' : 'expand'} details</p>
+                  </TooltipContent>
+                </Tooltip>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -164,7 +312,7 @@ const Index = () => {
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              How It Works
+              Why Choose ZamaCCO
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
               Leveraging Zama's FHE technology to compute on encrypted data
@@ -270,15 +418,38 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative z-10 py-8 px-4 border-t border-border">
+      {/* Footer with Social Links */}
+      <footer className="relative z-10 py-12 px-4 border-t border-border">
         <div className="container mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <Shield className="w-6 h-6 text-primary" />
               <span className="font-bold text-foreground">CCO</span>
               <span className="text-muted-foreground text-sm">• Confidential Credit Oracle</span>
             </div>
+            
+            {/* Social Links */}
+            <div className="flex items-center gap-4">
+              <a
+                href="https://github.com/chokhrich-dot/Z-CCO"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 border border-border hover:border-primary/50 transition-all duration-300 group"
+              >
+                <Github className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">GitHub</span>
+              </a>
+              <a
+                href="https://x.com/chokhrich1"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 border border-border hover:border-primary/50 transition-all duration-300 group"
+              >
+                <Twitter className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">Twitter</span>
+              </a>
+            </div>
+            
             <div className="text-sm text-muted-foreground">
               Built on Sepolia Testnet with Zama fhEVM
             </div>
