@@ -17,9 +17,9 @@
 It allows borrowers to submit fully encrypted financial data (income, collateral, debt) while preserving confidentiality. Lenders can compute credit scores and request selective decryption **without 
 exposing sensitive information**.  
 
-👾[LIVE DEMO]()
+👾[LIVE DEMO](https://z-cco.vercel.app/)
 
-🎞️[DEMO VIDEO]()
+🎞️[DEMO VIDEO](https://youtu.be/Ydnn-3bfvBs)
 
 ---
 
@@ -93,8 +93,6 @@ Web3 Layer: Wagmi + Viem for wallet connectivity and transaction management.
 Event Listeners: Real-time updates for EncryptedProfileSubmitted, CreditScoreComputed, DecryptionRequested.
 
 
-
-
 ---
 
 ## 🚀Getting Started
@@ -110,7 +108,7 @@ Event Listeners: Real-time updates for EncryptedProfileSubmitted, CreditScoreCom
 
 1️⃣ Clone the repository
 ```bash
-git clone https://github.com/chokhrich1/Z-CCO.git
+git clone https://github.com/chokhrich-dot/Z-CCO/
 cd Z-CCO
 ```
 2️⃣ Install dependencies
@@ -147,15 +145,15 @@ Add the deployed contract address in .env as VITE_ZAMACCO_ADDRESS.
 
 ## 📄 Documentation
 
-✔️Architecture Diagram → /docs/architecture.svg
+✔️ Architecture Diagram → /docs/architecture.svg
 
-✔️Pitch Deck → /docs/pitch-deck.md
+✔️ Pitch Deck → /docs/pitch-deck.md
  – Investor-ready presentation
 
-✔️Whitepaper v1 → /docs/whitepaper.md
+✔️ Whitepaper v1 → /docs/whitepaper.md
  – Full protocol & architecture details
 
-✔️Demo Script → /docs/demo-script.md
+✔️ Demo Script → /docs/demo-script.md
  – Step-by-step demo instructions
 
 
