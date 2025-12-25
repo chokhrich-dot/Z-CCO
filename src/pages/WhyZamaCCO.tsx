@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { MatrixBackground } from '@/components/layout/MatrixBackground';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { CreditScoreSimulator } from '@/components/simulator/CreditScoreSimulator';
 const benefits = [{
   icon: Shield,
   title: 'Military-Grade Security',
@@ -200,6 +201,26 @@ const WhyZamaCCO = () => {
                     </CardContent>
                   </Card>
                 </motion.div>)}
+            </div>
+          </motion.section>
+
+          {/* Credit Score Simulator Section */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="mb-20"
+          >
+            <h2 className="text-3xl font-bold text-foreground text-center mb-4">
+              Try the Credit Score Simulator
+            </h2>
+            <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+              Preview how changes to your financial profile would affect your credit tier
+            </p>
+            
+            <div className="max-w-xl mx-auto">
+              <CreditScoreSimulator />
             </div>
           </motion.section>
 
