@@ -4,6 +4,8 @@
 [![FHE](https://img.shields.io/badge/FHE-Encrypted-green)](https://zama.ai/fhevm) 
 [![Web3](https://img.shields.io/badge/Web3-Compatible-purple)](https://ethereum.org/en/developers/docs/)
 
+PROJECT NAME = Z-CCO
+
 ---
 
 ![Alt text](logo.png)
@@ -75,7 +77,7 @@ Z-CCO/
 
 ```bash
 +-----------------+          +----------------+          +------------------+
-|    Borrower     |  ---->   |   ZAMA CCO     |  ---->   |      Lender      |
+|    Borrower     |  ---->   |     Z-CCO      |  ---->   |      Lender      |
 |  (encrypted)    |          |  Smart Contract|          |  (authorized)    |
 +-----------------+          +----------------+          +------------------+
 
@@ -84,7 +86,7 @@ SVG diagram: docs/architecture.svg
 
 ## 🔑Key Components:
 
-ZamaCCO Smart Contract: Handles encrypted data submission, credit score computation, and decryption requests.
+Z-CCO Smart Contract: Handles encrypted data submission, credit score computation, and decryption requests.
 
 UI Dashboard: Interactive frontend for borrowers and lenders with privacy-first animations.
 
